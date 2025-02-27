@@ -1,101 +1,105 @@
-import Image from "next/image";
+"use client";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+
+interface Asset {
+  id: number;
+  name: string;
+  type: string;
+  value: number;
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [form, setForm] = useState<Partial<Asset>>({});
+  const [isEditing, setIsEditing] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+  useEffect(() => {
+    fetchAssets();
+  }, []);
+
+  async function fetchAssets() {
+    const { data } = await supabase.from("assets").select("*");
+    setAssets(data || []);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (isEditing) {
+      await supabase.from("assets").update(form).eq("id", form.id);
+    } else {
+      await supabase.from("assets").insert(form);
+    }
+    fetchAssets();
+    setForm({});
+    setIsEditing(false);
+  }
+
+  async function handleDelete(id: number) {
+    await supabase.from("assets").delete().eq("id", id);
+    fetchAssets();
+  }
+
+  return (
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">Asset Management</h1>
+
+      <form onSubmit={handleSubmit} className="mb-4 space-y-2">
+        <input
+          className="border p-2 w-full"
+          placeholder="Name"
+          value={form.name || ""}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+        />
+        <input
+          className="border p-2 w-full"
+          placeholder="Type"
+          value={form.type || ""}
+          onChange={(e) => setForm({ ...form, type: e.target.value })}
+        />
+        <input
+          className="border p-2 w-full"
+          type="number"
+          placeholder="Value"
+          value={form.value || ""}
+          onChange={(e) => setForm({ ...form, value: Number(e.target.value) })}
+        />
+        <button className="bg-blue-500 text-white p-2 w-full" type="submit">
+          {isEditing ? "Update" : "Add"} Asset
+        </button>
+      </form>
+
+      <table className="w-full border-collapse border">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="border p-2">ID</th>
+            <th className="border p-2">Name</th>
+            <th className="border p-2">Type</th>
+            <th className="border p-2">Value</th>
+            <th className="border p-2">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {assets.map((asset) => (
+            <tr key={asset.id}>
+              <td className="border p-2">{asset.id}</td>
+              <td className="border p-2">{asset.name}</td>
+              <td className="border p-2">{asset.type}</td>
+              <td className="border p-2">{asset.value}</td>
+              <td className="border p-2 space-x-2">
+                <button className="bg-yellow-500 text-white p-1"
+                  onClick={() => { setForm(asset); setIsEditing(true); }}>
+                  Edit
+                </button>
+                <button className="bg-red-500 text-white p-1"
+                  onClick={() => handleDelete(asset.id)}>
+                  Delete
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
